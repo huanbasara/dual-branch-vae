@@ -1,0 +1,27 @@
+# Core ML frameworks
+torch>=1.9.0
+torchvision
+numpy
+scipy
+
+# Data processing
+pandas
+scikit-learn
+matplotlib
+pillow
+
+# Computer vision & graphics  
+kornia
+opencv-python
+cairosvg
+
+# SVG processing (pure Python alternative to pydiffvg)
+svgpathtools
+cssutils
+
+# Configuration
+pyyaml
+easydict
+
+# Development tools
+tqdm
