@@ -1,4 +1,4 @@
-from deepsvg.difflib.tensor import SVGTensor
+from ..utils.tensor import SVGTensor
 
 
 class _DefaultConfig:

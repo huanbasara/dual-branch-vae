@@ -8,7 +8,7 @@ import torch
 # 使用本地pydiffvg_lite替代pydiffvg
 from .. import pydiffvg_lite as pydiffvg
 
-from deepsvg.my_svg_dataset_pts import cubic_segments_to_points
+from ..data.my_svg_dataset_pts import cubic_segments_to_points
 
 
 def load_model1(path):
