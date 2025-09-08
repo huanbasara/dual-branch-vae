@@ -49,7 +49,7 @@ def save_svg(filename, width, height, shapes, shape_groups, use_gamma = False):
     # Store color
     for i, shape_group in enumerate(shape_groups):
         def add_color(shape_color, name):
-            if isinstance(shape_color, shape.LinearGradient):
+            if isinstance(shape_color, color.LinearGradient):
                 lg = shape_color
                 color = etree.SubElement(defs, 'linearGradient')
                 color.set('id', name)
@@ -73,27 +73,27 @@ def save_svg(filename, width, height, shapes, shape_groups, use_gamma = False):
             add_color(shape_group.stroke_color, 'shape_{}_stroke'.format(i))
 
     for i, shape_group in enumerate(shape_groups):
-        shape = shapes[shape_group.shape_ids[0]]
-        if isinstance(shape, shape.Circle):
+        shape_obj = shapes[shape_group.shape_ids[0]]
+        if isinstance(shape_obj, shape.Circle):
             shape_node = etree.SubElement(g, 'circle')
-            shape_node.set('r', str(shape.radius.item()))
-            shape_node.set('cx', str(shape.center[0].item()))
-            shape_node.set('cy', str(shape.center[1].item()))
-        elif isinstance(shape, shape.Polygon):
+            shape_node.set('r', str(shape_obj.radius.item()))
+            shape_node.set('cx', str(shape_obj.center[0].item()))
+            shape_node.set('cy', str(shape_obj.center[1].item()))
+        elif isinstance(shape_obj, shape.Polygon):
             shape_node = etree.SubElement(g, 'polygon')
-            points = shape.points.data.cpu().numpy()
+            points = shape_obj.points.data.cpu().numpy()
             path_str = ''
-            for j in range(0, shape.points.shape[0]):
+            for j in range(0, shape_obj.points.shape[0]):
                 path_str += '{} {}'.format(points[j, 0], points[j, 1])
-                if j != shape.points.shape[0] - 1:
+                if j != shape_obj.points.shape[0] - 1:
                     path_str +=  ' '
             shape_node.set('points', path_str)
-        elif isinstance(shape, shape.Path):
+        elif isinstance(shape_obj, shape.Path):
             shape_node = etree.SubElement(g, 'path')
-            num_segments = shape.num_control_points.shape[0]
-            num_control_points = shape.num_control_points.data.cpu().numpy()
-            points = shape.points.data.cpu().numpy()
-            num_points = shape.points.shape[0]
+            num_segments = shape_obj.num_control_points.shape[0]
+            num_control_points = shape_obj.num_control_points.data.cpu().numpy()
+            points = shape_obj.points.data.cpu().numpy()
+            num_points = shape_obj.points.shape[0]
             path_str = 'M {} {}'.format(points[0, 0], points[0, 1])
             point_id = 1
             for j in range(0, num_segments):
@@ -116,24 +116,24 @@ def save_svg(filename, width, height, shapes, shape_groups, use_gamma = False):
                             points[p2, 0], points[p2, 1])
                     point_id += 3
             shape_node.set('d', path_str)
-        elif isinstance(shape, shape.Rect):
+        elif isinstance(shape_obj, shape.Rect):
             shape_node = etree.SubElement(g, 'rect')
-            shape_node.set('x', str(shape.p_min[0].item()))
-            shape_node.set('y', str(shape.p_min[1].item()))
-            shape_node.set('width', str(shape.p_max[0].item() - shape.p_min[0].item()))
-            shape_node.set('height', str(shape.p_max[1].item() - shape.p_min[1].item()))
-        elif isinstance(shape, shape.Ellipse):
+            shape_node.set('x', str(shape_obj.p_min[0].item()))
+            shape_node.set('y', str(shape_obj.p_min[1].item()))
+            shape_node.set('width', str(shape_obj.p_max[0].item() - shape_obj.p_min[0].item()))
+            shape_node.set('height', str(shape_obj.p_max[1].item() - shape_obj.p_min[1].item()))
+        elif isinstance(shape_obj, shape.Ellipse):
             shape_node = etree.SubElement(g, 'ellipse')
-            shape_node.set('cx', str(shape.center[0].item()))
-            shape_node.set('cy', str(shape.center[1].item()))
-            shape_node.set('rx', str(shape.radius[0].item()))
-            shape_node.set('ry', str(shape.radius[1].item()))
+            shape_node.set('cx', str(shape_obj.center[0].item()))
+            shape_node.set('cy', str(shape_obj.center[1].item()))
+            shape_node.set('rx', str(shape_obj.radius[0].item()))
+            shape_node.set('ry', str(shape_obj.radius[1].item()))
         else:
             assert(False)
 
-        shape_node.set('stroke-width', str(2 * shape.stroke_width.data.cpu().item()))
+        shape_node.set('stroke-width', str(2 * shape_obj.stroke_width.data.cpu().item()))
         if shape_group.fill_color is not None:
-            if isinstance(shape_group.fill_color, shape.LinearGradient):
+            if isinstance(shape_group.fill_color, color.LinearGradient):
                 shape_node.set('fill', 'url(#shape_{}_fill)'.format(i))
             else:
                 c = shape_group.fill_color.data.cpu().numpy()
@@ -143,7 +143,7 @@ def save_svg(filename, width, height, shapes, shape_groups, use_gamma = False):
         else:
             shape_node.set('fill', 'none')
         if shape_group.stroke_color is not None:
-            if isinstance(shape_group.stroke_color, shape.LinearGradient):
+            if isinstance(shape_group.stroke_color, color.LinearGradient):
                 shape_node.set('stroke', 'url(#shape_{}_stroke)'.format(i))
             else:
                 c = shape_group.stroke_color.data.cpu().numpy()
