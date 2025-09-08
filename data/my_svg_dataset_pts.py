@@ -13,7 +13,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 
 # 使用本地pydiffvg_lite替代pydiffvg
-from .. import pydiffvg_lite as pydiffvg
+import pydiffvg_lite as pydiffvg
 
 pydiffvg.set_print_timing(False)
 gamma = 1.0

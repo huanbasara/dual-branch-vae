@@ -7,7 +7,7 @@ import matplotlib.offsetbox as offsetbox
 import torch
 # import pydiffvg  # Commented out - using fallback
 
-from ..data.my_svg_dataset_pts import cubic_segments_to_points
+from data.my_svg_dataset_pts import cubic_segments_to_points
 
 # ===== PyDiffVG Fallback Classes =====
 

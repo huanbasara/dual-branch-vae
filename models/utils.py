@@ -1,5 +1,5 @@
 import torch
-from ..utils.tensor import SVGTensor
+from utils.tensor import SVGTensor
 from torch.distributions.categorical import Categorical
 import torch.nn.functional as F
 

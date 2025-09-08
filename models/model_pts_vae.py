@@ -1,7 +1,7 @@
 from einops import rearrange
 import torch
 
-from ..utils.deepsvg_utils.utils import _unpack_group_batch, _make_seq_first, _make_batch_first
+from utils.deepsvg_utils.utils import _unpack_group_batch, _make_seq_first, _make_batch_first
 
 from .layers.transformer import *
 from .layers.improved_transformer import *
