@@ -46,27 +46,27 @@ def save_svg(filename, width, height, shapes, shape_groups, use_gamma = False):
         feFuncA.set('exponent', str(1/2.2))
         g.set('style', 'filter:url(#gamma)')
 
-    # Store color
+    # Store color - define add_color function outside the loop
+    def add_color(shape_color, name):
+        if isinstance(shape_color, color.LinearGradient):
+            lg = shape_color
+            gradient_elem = etree.SubElement(defs, 'linearGradient')
+            gradient_elem.set('id', name)
+            gradient_elem.set('x1', str(lg.begin[0].item()))
+            gradient_elem.set('y1', str(lg.begin[1].item()))
+            gradient_elem.set('x2', str(lg.end[0].item()))
+            gradient_elem.set('y2', str(lg.end[1].item()))
+            offsets = lg.offsets.data.cpu().numpy()
+            stop_colors = lg.stop_colors.data.cpu().numpy()
+            for j in range(offsets.shape[0]):
+                stop = etree.SubElement(gradient_elem, 'stop')
+                stop.set('offset', str(offsets[j]))
+                c = lg.stop_colors[j, :]
+                stop.set('stop-color', 'rgb({}, {}, {})'.format(\
+                    int(255 * c[0]), int(255 * c[1]), int(255 * c[2])))
+                stop.set('stop-opacity', '{}'.format(c[3]))
+    
     for i, shape_group in enumerate(shape_groups):
-        def add_color(shape_color, name):
-            if isinstance(shape_color, color.LinearGradient):
-                lg = shape_color
-                color = etree.SubElement(defs, 'linearGradient')
-                color.set('id', name)
-                color.set('x1', str(lg.begin[0].item()))
-                color.set('y1', str(lg.begin[1].item()))
-                color.set('x2', str(lg.end[0].item()))
-                color.set('y2', str(lg.end[1].item()))
-                offsets = lg.offsets.data.cpu().numpy()
-                stop_colors = lg.stop_colors.data.cpu().numpy()
-                for j in range(offsets.shape[0]):
-                    stop = etree.SubElement(color, 'stop')
-                    stop.set('offset', str(offsets[j]))
-                    c = lg.stop_colors[j, :]
-                    stop.set('stop-color', 'rgb({}, {}, {})'.format(\
-                        int(255 * c[0]), int(255 * c[1]), int(255 * c[2])))
-                    stop.set('stop-opacity', '{}'.format(c[3]))
-
         if shape_group.fill_color is not None:
             add_color(shape_group.fill_color, 'shape_{}_fill'.format(i))
         if shape_group.stroke_color is not None:
