@@ -18,6 +18,8 @@ cairosvg
 # SVG processing (pure Python alternative to pydiffvg)
 svgpathtools
 cssutils
+svglib
+reportlab
 
 # Configuration
 pyyaml
