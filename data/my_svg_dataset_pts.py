@@ -328,13 +328,24 @@ class SVGDataset_GoogleDrive(Dataset):
         points = shape.points
         num_control_points = shape.num_control_points
         
+        # Debug information
+        print(f"=== Debug path {path_idx} in {svg_path.split('/')[-1]} ===")
+        print(f"Original points shape: {points.shape}")
+        print(f"num_control_points: {num_control_points}")
+        print(f"num_control_points length: {len(num_control_points)}")
+        
         # Transform points if applicable
         if self.transform:
             points = self.transform(points)
+            print(f"After transform points shape: {points.shape}")
         
         # Truncate if sequence is too long
         if points.shape[0] > self.fixed_length:
             points = points[:self.fixed_length]
+            print(f"After truncation points shape: {points.shape}")
+        
+        # Debug before cubic computation
+        print(f"Before cubic computation - points: {points.shape}, control_points: {num_control_points}")
         
         # Compute the cubics segments
         cubics = get_cubic_segments_from_points(
