@@ -368,35 +368,63 @@ class SVGDataset_GoogleDrive(Dataset):
         points = shape.points
         num_control_points = shape.num_control_points
         
-        
         # Transform points if applicable
         if self.transform:
             points = self.transform(points)
         
-        # Truncate if sequence is too long (follow original logic)
-        if points.shape[0] > self.fixed_length - 1:
-            points = points[:self.fixed_length - 1]
-            
-            # Also need to truncate num_control_points to match truncated points
-            # Calculate how many segments can fit in the truncated points
-            max_segments = self.calculate_max_segments(points.shape[0], num_control_points)
-            if max_segments < len(num_control_points):
-                num_control_points = num_control_points[:max_segments]
-        
-        # Compute the cubics segments
-        cubics = get_cubic_segments_from_points(
+        # First convert to cubic bezier curves (from original path)
+        original_cubics = get_cubic_segments_from_points(
             points=points, num_control_points=num_control_points)
         
-        # Check if cubics length meets requirements (follow original logic)
-        desired_cubics_length = (self.fixed_length - 1) // 3
-        actual_cubics_length = cubics.shape[0]
-        
-        if actual_cubics_length < desired_cubics_length:
-            # Skip this sample - not enough control points
+        # Check if we have enough curves to sample from
+        if original_cubics.shape[0] == 0:
             return None
-        elif actual_cubics_length > desired_cubics_length:
-            # Truncate to desired length
-            cubics = cubics[:desired_cubics_length]
+        
+        # Sample fixed number of points from the path
+        # Target: 10 cubics = 31 points (including start point), then remove last point = 30 points
+        target_points = 31  # 1 start + 10*3 = 31 points
+        desired_cubics_length = 10
+        
+        # Sample points uniformly along the path
+        if original_cubics.shape[0] == 1:
+            # Single curve: sample more points from this curve
+            sampled_points = sample_bezier(original_cubics, k=target_points)
+        else:
+            # Multiple curves: distribute sampling across curves
+            points_per_curve = max(3, target_points // original_cubics.shape[0])
+            sampled_points = sample_bezier(original_cubics, k=points_per_curve)
+            
+            # If we have too many points, subsample uniformly
+            if sampled_points.shape[0] > target_points:
+                indices = torch.linspace(0, sampled_points.shape[0] - 1, target_points, dtype=torch.long)
+                sampled_points = sampled_points[indices]
+            # If we have too few points, repeat the last segment sampling
+            elif sampled_points.shape[0] < target_points:
+                # Add more samples from the last curve
+                needed = target_points - sampled_points.shape[0]
+                last_curve = original_cubics[-1:, :, :]
+                extra_points = sample_bezier(last_curve, k=needed)
+                sampled_points = torch.cat([sampled_points, extra_points], dim=0)
+        
+        # Ensure we have exactly target_points
+        if sampled_points.shape[0] > target_points:
+            sampled_points = sampled_points[:target_points]
+        elif sampled_points.shape[0] < target_points:
+            # Pad by repeating the last point
+            last_point = sampled_points[-1:, :]
+            needed = target_points - sampled_points.shape[0]
+            padding = last_point.repeat(needed, 1)
+            sampled_points = torch.cat([sampled_points, padding], dim=0)
+        
+        # Remove the last point to get 30 points (following circle_10.svg logic)
+        points = sampled_points[:-1]  # 30 points
+        
+        # Create num_control_points for 10 cubic curves (each curve has 2 control points)
+        num_control_points = torch.tensor([2] * desired_cubics_length)
+        
+        # Compute the final cubics from sampled points
+        cubics = get_cubic_segments_from_points(
+            points=points, num_control_points=num_control_points)
         
         # Render image if needed
         path_img = []
