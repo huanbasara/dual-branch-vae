@@ -76,8 +76,9 @@ def svg_to_tensor(svg_input, width=224, height=224, device="cuda"):
         device: 设备
     """
     # 判断输入是文件路径还是SVG内容
-    if svg_input.endswith('.svg') or '/' in svg_input:
-        # 文件路径
+    import os
+    if os.path.exists(svg_input) and svg_input.endswith('.svg'):
+        # 文件路径存在且是.svg文件
         with open(svg_input, 'r', encoding='utf-8') as f:
             svg_content = f.read()
     else:
