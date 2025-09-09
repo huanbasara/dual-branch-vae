@@ -17,9 +17,12 @@ def set_use_gpu(use_gpu):
 # 导入渲染功能
 from .render import RenderFunction, svg_to_png, png_to_tensor, svg_to_tensor
 
+# 导入路径处理功能
+from .path_utils import convert_path_cubic, standardize_svg_paths
+
 __all__ = [
     'svg_to_scene', 'Path', 'Circle', 'Ellipse', 'Polygon', 'Rect', 'ShapeGroup',
     'from_svg_path', 'save_svg', 'LinearGradient', 'RadialGradient',
     'set_print_timing', 'get_device', 'get_use_gpu', 'set_use_gpu', 'RenderFunction',
-    'svg_to_png', 'png_to_tensor', 'svg_to_tensor'
+    'svg_to_png', 'png_to_tensor', 'svg_to_tensor', 'convert_path_cubic', 'standardize_svg_paths'
 ]

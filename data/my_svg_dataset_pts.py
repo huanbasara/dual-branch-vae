@@ -306,8 +306,11 @@ class SVGDataset_GoogleDrive(Dataset):
             # Parse SVG file
             canvas_width, canvas_height, shapes, shape_groups = pydiffvg.svg_to_scene(svg_path)
             
-            # Get the specific path
-            target_shape = shapes[path_idx]
+            # Standardize all paths to cubic bezier curves
+            standardized_shapes = pydiffvg.standardize_svg_paths(shapes)
+            
+            # Get the specific standardized path
+            target_shape = standardized_shapes[path_idx]
             points = target_shape.points
             num_control_points = target_shape.num_control_points
             
