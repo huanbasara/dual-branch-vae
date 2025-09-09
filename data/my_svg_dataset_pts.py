@@ -283,22 +283,18 @@ class SVGDataset_GoogleDrive(Dataset):
                             svg_path = os.path.join(category_dir, filename)
                             svg_file_paths.append(svg_path)
         
-        print(f"Processing {len(svg_file_paths)} SVG files...")
         
         # Process all SVG files and store ready-to-use samples
-        self.processed_samples = []
+        self.samples = []
         
         for i, svg_path in enumerate(svg_file_paths):
-            if i % 50 == 0 and i > 0:  # Progress indicator
-                print(f"Processed {i}/{len(svg_file_paths)} files, found {len(self.processed_samples)} valid samples")
             
             try:
                 samples = self.process_svg_file(svg_path)
-                self.processed_samples.extend(samples)
+                self.samples.extend(samples)
             except Exception as e:
-                print(f"Warning: Failed to process {svg_path}: {e}")
+                pass  # Skip processing warnings
         
-        print(f"Successfully processed {len(self.processed_samples)} samples from {len(svg_file_paths)} SVG files")
 
     def process_svg_file(self, svg_path):
         """Process a single SVG file and return list of valid samples"""
@@ -319,7 +315,7 @@ class SVGDataset_GoogleDrive(Dataset):
                 if sample is not None:  # Only add valid samples
                     valid_samples.append(sample)
             except Exception as e:
-                print(f"Warning: Failed to process path {path_idx} in {svg_path}: {e}")
+                pass  # Skip invalid paths silently
         
         return valid_samples
     
@@ -339,16 +335,10 @@ class SVGDataset_GoogleDrive(Dataset):
         points = shape.points
         num_control_points = shape.num_control_points
         
-        # Debug information
-        print(f"=== Debug path {path_idx} in {svg_path.split('/')[-1]} ===")
-        print(f"Original points shape: {points.shape}")
-        print(f"num_control_points: {num_control_points}")
-        print(f"num_control_points length: {len(num_control_points)}")
         
         # Transform points if applicable
         if self.transform:
             points = self.transform(points)
-            print(f"After transform points shape: {points.shape}")
         
         # Truncate if sequence is too long (follow original logic)
         if points.shape[0] > self.fixed_length - 1:
@@ -359,12 +349,6 @@ class SVGDataset_GoogleDrive(Dataset):
             max_segments = self.calculate_max_segments(points.shape[0], num_control_points)
             if max_segments < len(num_control_points):
                 num_control_points = num_control_points[:max_segments]
-            
-            print(f"After truncation points shape: {points.shape}")
-            print(f"After truncation control_points length: {len(num_control_points)}")
-        
-        # Debug before cubic computation
-        print(f"Before cubic computation - points: {points.shape}, control_points: {num_control_points}")
         
         # Compute the cubics segments
         cubics = get_cubic_segments_from_points(
@@ -374,14 +358,8 @@ class SVGDataset_GoogleDrive(Dataset):
         desired_cubics_length = (self.fixed_length - 1) // 3
         actual_cubics_length = cubics.shape[0]
         
-        print(f"Cubics computation result:")
-        print(f"  - Actual cubics shape: {cubics.shape}")
-        print(f"  - Desired cubics length: {desired_cubics_length}")
-        print(f"  - Will be filtered: {actual_cubics_length < desired_cubics_length}")
-        
         if actual_cubics_length < desired_cubics_length:
             # Skip this sample - not enough control points
-            print(f"  ❌ Sample filtered out: {actual_cubics_length} < {desired_cubics_length}")
             return None
         elif actual_cubics_length > desired_cubics_length:
             # Truncate to desired length
@@ -397,7 +375,7 @@ class SVGDataset_GoogleDrive(Dataset):
                 if img_tensor.dim() == 3 and img_tensor.shape[0] == 3:  # RGB
                     path_img = img_tensor.permute(1, 2, 0)  # CHW to HWC
             except Exception as e:
-                print(f"Warning: Failed to render {svg_path}: {e}")
+                pass  # Skip render warnings
                 path_img = torch.zeros((self.h, self.w, 3))
         
         return {
@@ -410,11 +388,11 @@ class SVGDataset_GoogleDrive(Dataset):
         }
 
     def __len__(self):
-        return len(self.processed_samples)
+        return len(self.samples)
 
     def __getitem__(self, idx):
         """Pure data access - all processing done in __init__"""
-        return self.processed_samples[idx]
+        return self.samples[idx]
 
 
 def collate_fn(batch):
