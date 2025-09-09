@@ -323,6 +323,17 @@ class SVGDataset_GoogleDrive(Dataset):
         
         return valid_samples
     
+    def calculate_max_segments(self, num_points, num_control_points):
+        """Calculate maximum number of segments that can fit in truncated points"""
+        # For cubic bezier: each segment needs 3 points (start point shared with previous)
+        # First segment: 1 start + 3 = 4 points
+        # Each additional segment: +3 points
+        # Total points = 1 + 3*num_segments
+        # So: num_segments = (num_points - 1) / 3
+        
+        max_segments = (num_points - 1) // 3
+        return max(0, min(max_segments, len(num_control_points)))
+    
     def process_single_path(self, svg_path, shape, path_idx):
         """Process a single path and return ready-to-use sample"""
         points = shape.points
@@ -342,7 +353,15 @@ class SVGDataset_GoogleDrive(Dataset):
         # Truncate if sequence is too long
         if points.shape[0] > self.fixed_length:
             points = points[:self.fixed_length]
+            
+            # Also need to truncate num_control_points to match truncated points
+            # Calculate how many segments can fit in the truncated points
+            max_segments = self.calculate_max_segments(points.shape[0], num_control_points)
+            if max_segments < len(num_control_points):
+                num_control_points = num_control_points[:max_segments]
+            
             print(f"After truncation points shape: {points.shape}")
+            print(f"After truncation control_points length: {len(num_control_points)}")
         
         # Debug before cubic computation
         print(f"Before cubic computation - points: {points.shape}, control_points: {num_control_points}")
