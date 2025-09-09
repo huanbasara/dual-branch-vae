@@ -74,26 +74,16 @@ def png_to_tensor(image, device="cuda"):
     
     return img_tensor
 
-def svg_to_tensor(svg_input, width=224, height=224, device="cuda"):
+def svg_to_tensor(svg_content, width=224, height=224, device="cuda"):
     """
-    SVG直接转换为tensor（组合上面两个函数）
+    SVG内容字符串直接转换为tensor
     
     Args:
-        svg_input: SVG内容字符串 或 SVG文件路径
+        svg_content: SVG内容字符串
         width: 宽度
         height: 高度
         device: 设备
     """
-    # 判断输入是文件路径还是SVG内容
-    import os
-    if os.path.exists(svg_input) and svg_input.endswith('.svg'):
-        # 文件路径存在且是.svg文件
-        with open(svg_input, 'r', encoding='utf-8') as f:
-            svg_content = f.read()
-    else:
-        # SVG内容字符串
-        svg_content = svg_input
-    
     image = svg_to_png(svg_content, width, height)
     tensor = png_to_tensor(image, device)
     
