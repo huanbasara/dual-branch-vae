@@ -4,7 +4,7 @@
 import torch
 import numpy as np
 
-def svg_to_png(svg_content, width=224, height=224, output_path=None):
+def svg_to_png(svg_content, width=224, height=224, output_path=None, white_background=True):
     """
     将SVG内容渲染为PNG图像
     
@@ -13,6 +13,7 @@ def svg_to_png(svg_content, width=224, height=224, output_path=None):
         width: 输出宽度
         height: 输出高度
         output_path: 保存路径，如果为None则不保存
+        white_background: 是否添加白色背景
         
     Returns:
         PIL.Image: PNG图像对象
@@ -31,6 +32,14 @@ def svg_to_png(svg_content, width=224, height=224, output_path=None):
         
         # 转换为PIL图像
         image = Image.open(io.BytesIO(png_bytes)).convert('RGBA')
+        
+        # 添加白色背景（解决黑色背景问题）
+        if white_background:
+            # 创建白色背景
+            white_bg = Image.new('RGBA', (width, height), (255, 255, 255, 255))
+            # 将SVG图像粘贴到白色背景上
+            white_bg.paste(image, (0, 0), image)
+            image = white_bg
         
         # 保存文件
         if output_path:
