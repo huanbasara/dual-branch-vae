@@ -330,6 +330,39 @@ class SVGDataset_GoogleDrive(Dataset):
         max_segments = (num_points - 1) // 3
         return max(0, min(max_segments, len(num_control_points)))
     
+    def _create_svg_from_points(self, points):
+        """Create SVG content from processed points"""
+        # Apply inverse transform to get pixel coordinates for SVG
+        normalizer = Normalize(self.w, self.h)
+        pixel_points = normalizer.inverse_transform(points)
+        
+        # Start SVG content
+        svg_content = f'''<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{self.w}" height="{self.h}">
+    <path d="'''
+        
+        # Create path data from points
+        path_data = f"M {pixel_points[0][0]} {pixel_points[0][1]}"
+        
+        # Add cubic bezier curves (assuming 3 points per curve)
+        for i in range(1, len(pixel_points), 3):
+            if i + 2 < len(pixel_points):
+                # Cubic bezier: C x1 y1 x2 y2 x3 y3
+                p1 = pixel_points[i]
+                p2 = pixel_points[i + 1] 
+                p3 = pixel_points[i + 2]
+                path_data += f" C {p1[0]} {p1[1]} {p2[0]} {p2[1]} {p3[0]} {p3[1]}"
+            elif i < len(pixel_points):
+                # Line to remaining points
+                p = pixel_points[i]
+                path_data += f" L {p[0]} {p[1]}"
+        
+        svg_content += path_data
+        svg_content += '''" fill="none" stroke="black" stroke-width="2"/>
+</svg>'''
+        
+        return svg_content
+    
     def process_single_path(self, svg_path, shape, path_idx):
         """Process a single path and return ready-to-use sample"""
         points = shape.points
@@ -369,8 +402,9 @@ class SVGDataset_GoogleDrive(Dataset):
         path_img = []
         if self.use_model_fusion:
             try:
-                # Render SVG to tensor (using our pydiffvg_lite)
-                img_tensor = pydiffvg.svg_to_tensor(svg_path, width=self.w, height=self.h)
+                # Create SVG from processed points and render it
+                processed_svg_content = self._create_svg_from_points(points)
+                img_tensor = pydiffvg.svg_to_tensor(processed_svg_content, width=self.w, height=self.h)
                 # img_tensor should be (H, W, 3) format now
                 if img_tensor.dim() == 3 and img_tensor.shape[2] == 3:  # HWC format
                     path_img = img_tensor
@@ -378,7 +412,7 @@ class SVGDataset_GoogleDrive(Dataset):
                     print(f"Warning: Unexpected tensor shape {img_tensor.shape}")
                     path_img = torch.zeros((self.h, self.w, 3))
             except Exception as e:
-                print(f"Warning: Failed to render {svg_path}: {e}")
+                print(f"Warning: Failed to render processed path: {e}")
                 path_img = torch.zeros((self.h, self.w, 3))
         
         return {
