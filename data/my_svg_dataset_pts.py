@@ -356,8 +356,8 @@ class SVGDataset_GoogleDrive(Dataset):
             width_coverage = (x_max - x_min) / canvas_width
             height_coverage = (y_max - y_min) / canvas_height
             
-            # Heuristic 3: Border covers > 80% of canvas in both dimensions
-            if width_coverage > 0.8 and height_coverage > 0.8:
+            # Heuristic 3: Border covers > 70% of canvas in both dimensions
+            if width_coverage > 0.7 and height_coverage > 0.7:
                 
                 # Heuristic 4: Border has simple geometry (rectangular-like)
                 # Check if most points are on the perimeter
