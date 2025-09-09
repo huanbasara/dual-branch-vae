@@ -309,6 +309,11 @@ class SVGDataset_GoogleDrive(Dataset):
         for path_idx, shape in enumerate(standardized_shapes):
             if not hasattr(shape, 'points'):
                 continue
+            
+            # Filter out border/frame paths
+            if self._is_border_frame(shape, path_idx, canvas_width, canvas_height):
+                print(f"🚫 Filtered border frame: path {path_idx} ({shape.points.shape[0]} points)")
+                continue
                 
             try:
                 sample = self.process_single_path(svg_path, shape, path_idx)
@@ -318,6 +323,66 @@ class SVGDataset_GoogleDrive(Dataset):
                 pass  # Skip invalid paths silently
         
         return valid_samples
+    
+    def _is_border_frame(self, shape, path_idx, canvas_width=192, canvas_height=192):
+        """
+        Detect if a shape is likely a border/frame that should be filtered out
+        
+        Args:
+            shape: The parsed shape object
+            path_idx: Index of the path (borders are usually path_idx=0)
+            canvas_width, canvas_height: SVG canvas dimensions
+            
+        Returns:
+            bool: True if this shape appears to be a border/frame
+        """
+        if not hasattr(shape, 'points') or shape.points.shape[0] == 0:
+            return False
+            
+        points = shape.points
+        
+        # Heuristic 1: Border frames are usually the first sub-path (path_idx=0)
+        # and have relatively few points (< 30 points typically)
+        if path_idx == 0 and points.shape[0] < 30:
+            
+            # Heuristic 2: Check if points span nearly the entire canvas
+            x_min, x_max = points[:, 0].min().item(), points[:, 0].max().item()
+            y_min, y_max = points[:, 1].min().item(), points[:, 1].max().item()
+            
+            # Convert to original coordinate system (considering SVG transforms)
+            # Most SVGs use viewBox="0 0 192 192" and transform="scale(0.1, -0.1)"
+            # So coordinates are typically in range [0, 1920] before transform
+            
+            width_coverage = (x_max - x_min) / canvas_width
+            height_coverage = (y_max - y_min) / canvas_height
+            
+            # Heuristic 3: Border covers > 80% of canvas in both dimensions
+            if width_coverage > 0.8 and height_coverage > 0.8:
+                
+                # Heuristic 4: Border has simple geometry (rectangular-like)
+                # Check if most points are on the perimeter
+                corner_tolerance = 0.1 * min(canvas_width, canvas_height)
+                
+                edge_points = 0
+                total_points = points.shape[0]
+                
+                for point in points:
+                    x, y = point[0].item(), point[1].item()
+                    # Check if point is near any edge
+                    near_left = abs(x - x_min) < corner_tolerance
+                    near_right = abs(x - x_max) < corner_tolerance  
+                    near_top = abs(y - y_min) < corner_tolerance
+                    near_bottom = abs(y - y_max) < corner_tolerance
+                    
+                    if near_left or near_right or near_top or near_bottom:
+                        edge_points += 1
+                
+                # If >70% of points are on edges, likely a border
+                edge_ratio = edge_points / total_points
+                if edge_ratio > 0.7:
+                    return True
+        
+        return False
     
     def calculate_max_segments(self, num_points, num_control_points):
         """Calculate maximum number of segments that can fit in truncated points"""
