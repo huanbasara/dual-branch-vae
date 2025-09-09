@@ -248,6 +248,114 @@ class SVGDataset(Dataset):
         return res_data
 
 
+class SVGDataset_GoogleDrive(Dataset):
+    """
+    Dataset for Google Drive SVG files with multi-path support and on-the-fly rendering
+    """
+    def __init__(self, data_path, h, w, fixed_length=60, category=None, file_list=None, transform=None, use_model_fusion=False):
+        super(SVGDataset_GoogleDrive, self).__init__()
+        self.data_path = data_path
+        self.h = h
+        self.w = w
+        self.fixed_length = fixed_length
+        self.transform = transform
+        self.use_model_fusion = use_model_fusion
+        
+        # Build sample list: (svg_file_path, path_index)
+        self.samples = []
+        
+        if category and file_list:
+            # Process specific files in a category
+            category_dir = os.path.join(data_path, category)
+            for filename in file_list:
+                svg_path = os.path.join(category_dir, filename)
+                if os.path.exists(svg_path):
+                    # Get number of paths in this SVG
+                    try:
+                        canvas_width, canvas_height, shapes, shape_groups = pydiffvg.svg_to_scene(svg_path)
+                        for path_idx, shape in enumerate(shapes):
+                            if hasattr(shape, 'points'):  # Only process Path objects
+                                self.samples.append((svg_path, path_idx))
+                    except Exception as e:
+                        print(f"Warning: Failed to process {svg_path}: {e}")
+        else:
+            # Process all categories and files
+            for category_name in os.listdir(data_path):
+                category_dir = os.path.join(data_path, category_name)
+                if os.path.isdir(category_dir):
+                    for filename in os.listdir(category_dir):
+                        if filename.endswith('.svg'):
+                            svg_path = os.path.join(category_dir, filename)
+                            try:
+                                canvas_width, canvas_height, shapes, shape_groups = pydiffvg.svg_to_scene(svg_path)
+                                for path_idx, shape in enumerate(shapes):
+                                    if hasattr(shape, 'points'):
+                                        self.samples.append((svg_path, path_idx))
+                            except Exception as e:
+                                print(f"Warning: Failed to process {svg_path}: {e}")
+        
+        print(f"Loaded {len(self.samples)} path samples from Google Drive dataset")
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        svg_path, path_idx = self.samples[idx]
+        
+        try:
+            # Parse SVG file
+            canvas_width, canvas_height, shapes, shape_groups = pydiffvg.svg_to_scene(svg_path)
+            
+            # Get the specific path
+            target_shape = shapes[path_idx]
+            points = target_shape.points
+            num_control_points = target_shape.num_control_points
+            
+            # Transform points if applicable
+            if self.transform:
+                points = self.transform(points)
+            
+            # Truncate if sequence is too long
+            if points.shape[0] > self.fixed_length:
+                points = points[:self.fixed_length]
+            
+            # Compute the cubics segments
+            cubics = get_cubic_segments_from_points(
+                points=points, num_control_points=num_control_points)
+            
+            desired_cubics_length = self.fixed_length // 3
+            assert cubics.shape[0] == desired_cubics_length
+            
+            # Render image on-the-fly using pydiffvg_lite
+            path_img = []
+            if self.use_model_fusion:
+                try:
+                    # Render SVG to tensor (using our pydiffvg_lite)
+                    img_tensor = pydiffvg.svg_to_tensor(svg_path, width=self.w, height=self.h)
+                    # Convert to expected format for load_target_new
+                    if img_tensor.dim() == 3 and img_tensor.shape[0] == 3:  # RGB
+                        path_img = img_tensor.permute(1, 2, 0)  # CHW to HWC
+                except Exception as e:
+                    print(f"Warning: Failed to render {svg_path}: {e}")
+                    path_img = torch.zeros((self.h, self.w, 3))
+            
+            res_data = {
+                "points": points,
+                "cubics": cubics,
+                "lengths": self.fixed_length,
+                "filepaths": svg_path,
+                "path_img": path_img,
+                "path_index": path_idx
+            }
+            
+        except Exception as e:
+            print(f"Error processing sample {idx}: {svg_path}, path {path_idx}")
+            print(f"Error message: {str(e)}")
+            raise e
+        
+        return res_data
+
+
 def collate_fn(batch):
     # Fixed length to which sequences should be padded
     fixed_length = 30
