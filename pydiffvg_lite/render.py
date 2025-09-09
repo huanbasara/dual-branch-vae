@@ -65,12 +65,33 @@ def png_to_tensor(image, device="cuda"):
     
     return img_tensor
 
-def svg_to_tensor(svg_content, width=224, height=224, device="cuda"):
+def svg_to_tensor(svg_input, width=224, height=224, device="cuda"):
     """
     SVG直接转换为tensor（组合上面两个函数）
+    
+    Args:
+        svg_input: SVG内容字符串 或 SVG文件路径
+        width: 宽度
+        height: 高度
+        device: 设备
     """
+    # 判断输入是文件路径还是SVG内容
+    if svg_input.endswith('.svg') or '/' in svg_input:
+        # 文件路径
+        with open(svg_input, 'r', encoding='utf-8') as f:
+            svg_content = f.read()
+    else:
+        # SVG内容字符串
+        svg_content = svg_input
+    
     image = svg_to_png(svg_content, width, height)
-    return png_to_tensor(image, device)
+    tensor = png_to_tensor(image, device)
+    
+    # 确保返回RGB格式 (H, W, 3)
+    if tensor.shape[-1] == 4:  # RGBA -> RGB
+        tensor = tensor[:, :, :3]
+    
+    return tensor
 
 # 简化的RenderFunction（仅保持兼容性）
 class RenderFunction:

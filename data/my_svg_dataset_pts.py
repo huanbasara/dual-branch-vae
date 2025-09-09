@@ -371,11 +371,14 @@ class SVGDataset_GoogleDrive(Dataset):
             try:
                 # Render SVG to tensor (using our pydiffvg_lite)
                 img_tensor = pydiffvg.svg_to_tensor(svg_path, width=self.w, height=self.h)
-                # Convert to expected format for load_target_new
-                if img_tensor.dim() == 3 and img_tensor.shape[0] == 3:  # RGB
-                    path_img = img_tensor.permute(1, 2, 0)  # CHW to HWC
+                # img_tensor should be (H, W, 3) format now
+                if img_tensor.dim() == 3 and img_tensor.shape[2] == 3:  # HWC format
+                    path_img = img_tensor
+                else:
+                    print(f"Warning: Unexpected tensor shape {img_tensor.shape}")
+                    path_img = torch.zeros((self.h, self.w, 3))
             except Exception as e:
-                pass  # Skip render warnings
+                print(f"Warning: Failed to render {svg_path}: {e}")
                 path_img = torch.zeros((self.h, self.w, 3))
         
         return {
