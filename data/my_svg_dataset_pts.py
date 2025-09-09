@@ -350,9 +350,9 @@ class SVGDataset_GoogleDrive(Dataset):
             points = self.transform(points)
             print(f"After transform points shape: {points.shape}")
         
-        # Truncate if sequence is too long
-        if points.shape[0] > self.fixed_length:
-            points = points[:self.fixed_length]
+        # Truncate if sequence is too long (follow original logic)
+        if points.shape[0] > self.fixed_length - 1:
+            points = points[:self.fixed_length - 1]
             
             # Also need to truncate num_control_points to match truncated points
             # Calculate how many segments can fit in the truncated points
@@ -370,8 +370,8 @@ class SVGDataset_GoogleDrive(Dataset):
         cubics = get_cubic_segments_from_points(
             points=points, num_control_points=num_control_points)
         
-        # Check if cubics length meets requirements
-        desired_cubics_length = self.fixed_length // 3
+        # Check if cubics length meets requirements (follow original logic)
+        desired_cubics_length = (self.fixed_length - 1) // 3
         actual_cubics_length = cubics.shape[0]
         
         print(f"Cubics computation result:")
