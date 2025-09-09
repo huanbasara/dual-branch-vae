@@ -344,18 +344,20 @@ class SVGDataset_GoogleDrive(Dataset):
         # Create path data from points
         path_data = f"M {pixel_points[0][0]} {pixel_points[0][1]}"
         
-        # Add cubic bezier curves (assuming 3 points per curve)
+        # Add cubic bezier curves (3 points per curve)
+        # We have 30 points: point 0 is start, then 9 groups of 3 points each = 27 points
+        # So we need: points[1,2,3], [4,5,6], ..., [25,26,27], [28,29,0] for 10 curves
         for i in range(1, len(pixel_points), 3):
-            if i + 2 < len(pixel_points):
-                # Cubic bezier: C x1 y1 x2 y2 x3 y3
+            if i + 2 <= len(pixel_points) - 1:  # Normal case: all 3 points exist
                 p1 = pixel_points[i]
                 p2 = pixel_points[i + 1] 
                 p3 = pixel_points[i + 2]
                 path_data += f" C {p1[0]} {p1[1]} {p2[0]} {p2[1]} {p3[0]} {p3[1]}"
-            elif i < len(pixel_points):
-                # Line to remaining points
-                p = pixel_points[i]
-                path_data += f" L {p[0]} {p[1]}"
+            elif i + 1 <= len(pixel_points) - 1:  # Last curve: use start point to close
+                p1 = pixel_points[i]
+                p2 = pixel_points[i + 1] 
+                p3 = pixel_points[0]  # Close back to start point
+                path_data += f" C {p1[0]} {p1[1]} {p2[0]} {p2[1]} {p3[0]} {p3[1]}"
         
         svg_content += path_data
         svg_content += '''" fill="none" stroke="black" stroke-width="2"/>
