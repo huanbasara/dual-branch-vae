@@ -374,8 +374,14 @@ class SVGDataset_GoogleDrive(Dataset):
         desired_cubics_length = self.fixed_length // 3
         actual_cubics_length = cubics.shape[0]
         
+        print(f"Cubics computation result:")
+        print(f"  - Actual cubics shape: {cubics.shape}")
+        print(f"  - Desired cubics length: {desired_cubics_length}")
+        print(f"  - Will be filtered: {actual_cubics_length < desired_cubics_length}")
+        
         if actual_cubics_length < desired_cubics_length:
             # Skip this sample - not enough control points
+            print(f"  ❌ Sample filtered out: {actual_cubics_length} < {desired_cubics_length}")
             return None
         elif actual_cubics_length > desired_cubics_length:
             # Truncate to desired length
