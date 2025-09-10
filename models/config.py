@@ -17,9 +17,10 @@ class _DefaultConfig:
         self.encode_stages = 1           # One-stage or two-stage: 1 | 2
         self.decode_stages = 1           # One-stage or two-stage: 1 | 2
 
-        self.use_resnet = True           # Use extra fully-connected residual blocks after Encoder
-
-        self.use_vae = True              # Sample latent vector (with reparametrization trick) or use encodings directly
+        self.use_resnet = False          # Use extra fully-connected residual blocks after Encoder (Fixed: was True)
+        self.use_vae = False             # Sample latent vector (with reparametrization trick) or use encodings directly (Fixed: was True)
+        self.use_vqvae = False           # Use Vector Quantization VAE (Added missing attribute)
+        self.use_model_fusion = True     # Use dual-branch model fusion (Added missing attribute)
 
         self.pred_mode = "one_shot"      # Feed-forward (one-shot) or autogressive: "one_shot" | "autoregressive"
         self.rel_targets = False         # Predict coordinates in relative or absolute format
@@ -43,6 +44,18 @@ class _DefaultConfig:
         self.max_total_len = self.max_num_groups * self.max_seq_len  # Concatenated sequence length for baselines
 
         self.num_groups_proposal = self.max_num_groups  # Number of predicted paths, default: N_P
+        
+        # Additional missing attributes for dual-branch VAE
+        self.img_size = 64               # Image size for model fusion (Added missing attribute)
+        self.max_pts_len_thresh = 30     # Max points length threshold (Added missing attribute)
+        
+        # VQ-VAE related attributes (if needed)
+        self.vq_edim = 256               # VQ embedding dimension (Added missing attribute)
+        self.codebook_size = 1024        # VQ codebook size (Added missing attribute)
+        
+        # Image fusion related attributes  
+        self.d_img_model = 256           # Image encoder model dimension (Added missing attribute)
+        self.img_latent_dim = 64         # Image latent dimension (Added missing attribute)
 
     def get_model_args(self):
         model_args = []
