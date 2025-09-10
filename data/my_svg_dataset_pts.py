@@ -129,7 +129,6 @@ class SVGDataset_nopadding(Dataset):
 
             assert cubics.shape[0] == desired_cubics_length
 
-            path_img = []
             if self.img_dir:
                 im_pre = self.file_list[idx].split(".")[0]
                 im_path = os.path.join(self.img_dir, im_pre + ".png")
@@ -138,6 +137,10 @@ class SVGDataset_nopadding(Dataset):
                         path_img = load_target_new(im_path)
                     else:
                         path_img = load_target(im_path)
+                else:
+                    path_img = torch.zeros((self.h, self.w, 3))
+            else:
+                path_img = torch.zeros((self.h, self.w, 3))
 
             res_data = {
                 # control points
@@ -225,7 +228,6 @@ class SVGDataset(Dataset):
 
         assert points.shape[0] == self.fixed_length
 
-        path_img = []
         if self.img_dir:
             im_pre = self.file_list[idx].split(".")[0]
             im_path = os.path.join(self.img_dir, im_pre + ".png")
@@ -234,6 +236,10 @@ class SVGDataset(Dataset):
                     path_img = load_target_new(im_path)
                 else:
                     path_img = load_target(im_path)
+            else:
+                path_img = torch.zeros((self.h, self.w, 3))
+        else:
+            path_img = torch.zeros((self.h, self.w, 3))
 
         res_data = {
             # control points
@@ -494,7 +500,6 @@ class SVGDataset_GoogleDrive(Dataset):
             points=points, num_control_points=num_control_points)
         
         # Render image if needed
-        path_img = []
         if self.use_model_fusion:
             try:
                 # Create SVG from processed points and render it
@@ -509,6 +514,9 @@ class SVGDataset_GoogleDrive(Dataset):
             except Exception as e:
                 print(f"Warning: Failed to render processed path: {e}")
                 path_img = torch.zeros((self.h, self.w, 3))
+        else:
+            # Create dummy tensor when model fusion is disabled
+            path_img = torch.zeros((self.h, self.w, 3))
         
         return {
             "points": points,
